@@ -13,35 +13,64 @@ import "./styles.css";
 
 // =============== Reducers ===============
 
-function gameLogicReducer(state, index) {
-  const newSquares = state.squares.slice();
-  const xIsNext = state.xIsNext;
-  newSquares.splice(index, 1, xIsNext ? "X" : "O");
-  return {
-    squares: newSquares,
-    xIsNext: !xIsNext
-  };
+function gameLogicReducer(state, action) {
+  switch (action.type) {
+    case "PLAY_MOVE":
+      const index = action.payload;
+      const newSquares = state.squares.slice();
+      const xIsNext = state.xIsNext;
+      newSquares.splice(index, 1, xIsNext ? "X" : "O");
+      return {
+        squares: newSquares,
+        xIsNext: !xIsNext
+      };
+    case "PLAY_RESET":
+      return {
+        squares: new Array(9).fill(null),
+        xIsNext: true
+      };
+    default:
+      return state;
+  }
 }
 
 function timeTravelReducer(state, action) {
+  const { dispatchGame, actionReset } = state;
+  let { actionHistory, stepNumber } = state;
   switch (action.type) {
     case "HISTORY_ADD":
-      const gameLogicAction = action.payload;
-      let { gameLogicReducer, history, stepNumber } = state;
-      let gameState = history[stepNumber];
-      gameState = gameLogicReducer(gameState, gameLogicAction);
+      const gameAction = action.payload;
       stepNumber = stepNumber + 1;
-      history = history.slice(0, stepNumber);
-      history = history.concat([gameState]);
-      return {
-        gameLogicReducer,
-        history,
-        stepNumber
-      };
+      if (actionHistory.length === stepNumber) {
+        return {
+          ...state,
+          dispatchGame,
+          actionHistory: [...actionHistory, gameAction],
+          stepNumber
+        };
+      } else {
+        dispatchGame(actionReset);
+        actionHistory = actionHistory.slice(0, stepNumber);
+        actionHistory = actionHistory.concat([gameAction]);
+        actionHistory.forEach(action => dispatchGame(action));
+        return {
+          ...state,
+          dispatchGame,
+          actionHistory,
+          stepNumber: stepNumber
+        };
+      }
     case "HISTORY_JUMPTO":
+      if (actionHistory.length === 0) return state;
+      stepNumber = action.payload;
+      dispatchGame(actionReset);
+      for (let index = 0; index < stepNumber; index++) {
+        dispatchGame(actionHistory[index]);
+      }
+      stepNumber = stepNumber - 1;
       return {
         ...state,
-        stepNumber: action.payload
+        stepNumber
       };
     default:
       return state;
@@ -50,14 +79,15 @@ function timeTravelReducer(state, action) {
 
 // ============= Custom Hook ==============
 
-function useTimeTravel(gameLogicReducer, initialState) {
-  const [timeTravel, dispatchTimeTravel] = useReducer(timeTravelReducer, {
-    history: [initialState],
-    gameLogicReducer,
-    stepNumber: 0
+function useTimeTravel(dispatchGame, actionReset) {
+  const [timeTravel, dispatch] = useReducer(timeTravelReducer, {
+    dispatchGame,
+    actionReset,
+    actionHistory: [],
+    stepNumber: -1
   });
-  const { history, stepNumber } = timeTravel;
-  return [{ history, stepNumber }, dispatchTimeTravel];
+  const { actionHistory } = timeTravel;
+  return [actionHistory.length, dispatch];
 }
 
 // =========== React Components ===========
@@ -100,27 +130,34 @@ function Game() {
     squares: new Array(9).fill(null),
     xIsNext: true
   };
-  const [{ history, stepNumber }, dispatchTimeTravel] = useTimeTravel(
+  const [gameState, dispatchGame] = useReducer(
     gameLogicReducer,
     initialBoardState
   );
-  const current = history[stepNumber];
+  const actionReset = { type: "PLAY_RESET" };
+  const [stepNumber, dispatchTimeTravel] = useTimeTravel(
+    dispatchGame,
+    actionReset
+  );
+  // const current = history[stepNumber];
 
   function handleClick(i) {
-    const squares = current.squares;
+    const squares = gameState.squares;
     if (calculateWinner(squares) || squares[i]) {
       return;
     }
-    dispatchTimeTravel({ type: "HISTORY_ADD", payload: i });
+    const gameAction = { type: "PLAY_MOVE", payload: i };
+    dispatchGame(gameAction);
+    dispatchTimeTravel({ type: "HISTORY_ADD", payload: gameAction });
   }
 
   function jumpTo(step) {
     dispatchTimeTravel({ type: "HISTORY_JUMPTO", payload: step });
   }
 
-  const winner = calculateWinner(current.squares);
+  const winner = calculateWinner(gameState.squares);
 
-  const moves = history.map((step, move) => {
+  const moves = Array.from({ length: stepNumber + 1 }, (step, move) => {
     const desc = move ? "Go to move #" + move : "Go to game start";
     return (
       <li key={move}>
@@ -133,13 +170,13 @@ function Game() {
   if (winner) {
     status = "Winner: " + winner;
   } else {
-    status = "Next player: " + (current.xIsNext ? "X" : "O");
+    status = "Next player: " + (gameState.xIsNext ? "X" : "O");
   }
 
   return (
     <div className="game">
       <div className="game-board">
-        <Board squares={current.squares} onClick={i => handleClick(i)} />
+        <Board squares={gameState.squares} onClick={i => handleClick(i)} />
       </div>
       <div className="game-info">
         <div>{status}</div>
