@@ -64,9 +64,8 @@ function timeTravelReducer(state, action) {
       if (actionHistory.length === 0) return state;
       stepNumber = action.payload;
       dispatchGame(actionReset);
-      for (let index = 0; index < stepNumber; index++) {
-        dispatchGame(actionHistory[index]);
-      }
+      actionHistory = actionHistory.slice(0, stepNumber);
+      actionHistory.forEach(action => dispatchGame(action));
       stepNumber = stepNumber - 1;
       return {
         ...state,
@@ -157,14 +156,15 @@ function Game() {
 
   const winner = calculateWinner(gameState.squares);
 
-  const moves = Array.from({ length: stepNumber + 1 }, (step, move) => {
-    const desc = move ? "Go to move #" + move : "Go to game start";
-    return (
-      <li key={move}>
-        <button onClick={() => jumpTo(move)}>{desc}</button>
+  const moves = [];
+  for (let step = 0; step < stepNumber + 1; step++) {
+    const desc = step ? "Go to move #" + step : "Go to game start";
+    moves.push(
+      <li key={step}>
+        <button onClick={() => jumpTo(step)}>{desc}</button>
       </li>
     );
-  });
+  }
 
   let status;
   if (winner) {
