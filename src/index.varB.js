@@ -1,4 +1,4 @@
-/* III [final step with useReducer and Time Travel]
+/* III.B [final step with useReducer and Time Travel]
  * React Tutorial: "Intro to React"
  * - with hooks instead of class components.
  * - with reducer
