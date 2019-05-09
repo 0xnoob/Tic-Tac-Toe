@@ -133,12 +133,9 @@ function Game() {
     gameLogicReducer,
     initialBoardState
   );
-  const actionReset = { type: "PLAY_RESET" };
-  const [stepNumber, dispatchTimeTravel] = useTimeTravel(
-    dispatchGame,
-    actionReset
-  );
-  // const current = history[stepNumber];
+  const [stepNumber, dispatchTimeTravel] = useTimeTravel(dispatchGame, {
+    type: "PLAY_RESET"
+  });
 
   function handleClick(i) {
     const squares = gameState.squares;
