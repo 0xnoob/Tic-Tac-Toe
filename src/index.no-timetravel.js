@@ -14,11 +14,11 @@ import "./styles.css";
 // ================ Reducer ===============
 
 function reducer(state, index) {
-  const newSquares = state.squares.slice();
-  const xIsNext = state.xIsNext;
-  newSquares.splice(index, 1, xIsNext ? "X" : "O");
+  let { squares, xIsNext } = state;
+  squares = squares.slice();
+  squares[index] = xIsNext ? "X" : "O";
   return {
-    squares: newSquares,
+    squares,
     xIsNext: !xIsNext
   };
 }

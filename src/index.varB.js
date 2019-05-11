@@ -17,11 +17,11 @@ function gameLogicReducer(state, action) {
   switch (action.type) {
     case "PLAY_MOVE":
       const index = action.payload;
-      const newSquares = state.squares.slice();
-      const xIsNext = state.xIsNext;
-      newSquares.splice(index, 1, xIsNext ? "X" : "O");
+      let { squares, xIsNext } = state;
+      squares = squares.slice();
+      squares[index] = xIsNext ? "X" : "O";
       return {
-        squares: newSquares,
+        squares,
         xIsNext: !xIsNext
       };
     case "PLAY_RESET":
